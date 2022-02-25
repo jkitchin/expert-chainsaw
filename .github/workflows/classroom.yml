@@ -1,0 +1,511 @@
+name: GitHub Classroom Workflow
+
+on: 
+  push:
+    branches:
+    - '*'
+    - '!status'
+    - '!feedback'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+  issue_comment:
+    types: [created]
+
+jobs:
+  # job to run autograding
+  build:
+    name: Autograding
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: ${{ !(github.event_name == 'issue_comment') || contains(github.event.repository.name, github.actor) }}
+    steps:
+      - uses: actions/checkout@v2
+
+      # pause to wait for classroom bot to setup feedback PR
+      - if: ${{ github.actor == 'github-classroom[bot]' }}
+        run: sleep 30
+
+      # Default branch is usually 'main', but in case it isn't get default branch name
+      - name: Get default branch name
+        uses: actions/github-script@v5
+        id: default-branch-name
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            // get default branch
+            const repo = await github.rest.repos.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            console.log(`Get repo response - status: ${repo.status}`);
+            return repo.data.default_branch;
+          result-encoding: string
+      - run: echo "Default branch name - ${{ steps.default-branch-name.outputs.result }}"
+
+      # find PR if it exists
+      - name: Find PR number
+        uses: markpatterson27/find-pull-request-action@pre-pr-release
+        id: check-pr
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          title: Feedback
+          base: feedback
+          branch: ${{ steps.default-branch-name.outputs.result }}
+          state: all
+      - run: echo ${{ steps.check-pr.outputs.number }}
+
+      # re-open PR if closed
+      - name: Reopen PR
+        if: ${{ steps.check-pr.outputs.state == 'closed' }}
+        uses: actions/github-script@v5
+        env:
+            PR_NUMBER: ${{ steps.check-pr.outputs.number }}
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            try {
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: process.env.PR_NUMBER,
+                state: 'open'
+              });
+            } catch(err) {
+              console.log("Error reopening PR. (Merged PRs can't be reopened).");
+            }
+
+      # delete and recreate result dir
+      - name: Reset results dir
+        run: |
+          rm -rf .github/results
+          mkdir -p .github/results
+
+      # test activity 1
+      - uses: actions/github-script@v4
+        name: "Check Activity 1"
+        id: activity1
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            // get repo name
+            const repoName = context.repo.repo.toLowerCase()
+
+            // get repo members
+            const res = await github.repos.listCollaborators({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            let collaborators = res.data
+            console.log(collaborators)
+
+            // check if one of collab list matches repository name suffix. make case insensitive.
+            // pattern is `assignmentname-username` or `assignmentname-username-i`. #TODO: optionally remove number suffix and use endsWith to match
+            if (collaborators.some(collaborator=>repoName.includes(collaborator.login.toLowerCase()))) {
+              console.log("found collaborator match to repo suffix")
+
+              // write result to file
+              const fs = require('fs');
+              fs.writeFile('.github/results/activity1.txt', 'pass', function (err) {
+                if (err) return console.log(err);
+              });
+
+              return 'success'
+            }
+            else {
+              console.log("no match to repo suffix")
+              return 'fail'
+            }
+          result-encoding: string
+      
+      # test activity 2
+      - uses: actions/github-script@v4
+        name: "Check Activity 2"
+        id: activity2
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            // get commits, filtered by actor
+            const res = await github.repos.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              author: context.actor,
+            });
+            let commitList = res.data
+            console.log(commitList)
+
+            // is commit list non-zero
+            if (Array.isArray(commitList) && commitList.length) {
+              console.log("commits found")
+
+              // write result to file
+              const fs = require('fs');
+              fs.writeFile('.github/results/activity2.txt', 'pass', function (err) {
+                if (err) return console.log(err);
+              });
+
+              return 'success'
+            }
+            else {
+              console.log(`no commits for ${context.actor} found`)
+              return 'fail'
+            }
+          result-encoding: string
+
+      # test activity 3
+      - uses: actions/github-script@v4
+        name: "Check Activity 3"
+        id: activity3
+        if: ${{ steps.check-pr.outputs.number }}
+        env:
+          ISSUE: ${{ steps.check-pr.outputs.number }}
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            // get comments on Feedback PR
+            const res = await github.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: process.env.ISSUE,
+            });
+            let commentList = res.data
+            console.log(commentList)
+
+            // is comment list non-zero AND does actor equal one of comment authors
+            if (Array.isArray(commentList) && commentList.length && commentList.some(comment => comment.user.login == context.actor)) {
+              console.log("comments found")
+
+              // write result to file
+              const fs = require('fs');
+              fs.writeFile('.github/results/activity3.txt', 'pass', function (err) {
+                if (err) return console.log(err);
+              });
+
+              return 'success'
+            }
+            else {
+              console.log(`no comments for ${context.author} found`)
+              return 'fail'
+            }
+          result-encoding: string
+
+      - run: ls .github/results
+
+      # run grading
+      # add id to step so outputs can be referenced
+      - uses: education/autograding@v1
+        name: "** Grading and Feedback **"
+        id: autograde
+        continue-on-error: true
+
+      # # fail job if autograde returns failed
+      # # outcome can be 'success', 'failure', 'cancelled', or 'skipped'
+      # # trigger fail either on !success or on failure depending on preference
+      # - name: check autograde pass fail
+      #   if: ${{ steps.autograde.outcome != 'success' }}
+      #   run: exit 1
+
+    outputs:
+      grading-score: ${{ steps.autograde.outputs.Points }}
+      activity1-result: ${{ steps.activity1.outputs.result }}
+      activity2-result: ${{ steps.activity2.outputs.result }}
+      activity3-result: ${{ steps.activity3.outputs.result }}
+      default-branch-name: ${{ steps.default-branch-name.outputs.result }}
+      feedback-pr: ${{ steps.check-pr.outputs.number }}
+
+  # job to build activity status icons
+  build-activity-icons:
+    name: Build Activity Icons
+    runs-on: ubuntu-latest
+    if: ${{ always() && (!(github.event_name == 'issue_comment') || contains(github.event.repository.name, github.actor)) }}
+    needs: build
+    steps:
+      # need to checkout whole repo
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      # get quiz score
+      - name: Calculate quiz score
+        id: quiz-score
+        run: |
+          if [[ $(git log remotes/origin/feedback..main quiz.md) ]]; then
+            echo "quiz.md file changed"
+            /bin/bash .github/grading-scripts/quiz.sh || echo "::set-output name=quiz_score::0"
+          else
+            echo "quiz.md file not changed"
+          fi
+
+      # switch to status branch
+      - run: git checkout status || git checkout -b status
+
+      # make dir for activity status icons
+      - name: make icons dir
+        run: mkdir -p .github/activity-icons
+
+      # make/copy activity 1 icon
+      - name: activity 1 icon
+        run: |
+          echo ${{ needs.build.outputs.activity1-result }}
+          if ${{ needs.build.outputs.activity1-result == 'success' }}; then
+            cp .github/templates/activity-completed.svg .github/activity-icons/activity1.svg
+          else
+            cp .github/templates/activity-incomplete.svg .github/activity-icons/activity1.svg
+          fi
+
+      # make/copy activity 2 icon
+      - name: activity 2 icon
+        run: |
+          echo ${{ needs.build.outputs.activity2-result }}
+          if ${{ needs.build.outputs.activity2-result == 'success' }}; then
+            cp .github/templates/activity-completed.svg .github/activity-icons/activity2.svg
+          else
+            cp .github/templates/activity-incomplete.svg .github/activity-icons/activity2.svg
+          fi
+
+      # make/copy activity 3 icon
+      - name: activity 3 icon
+        run: |
+          echo ${{ needs.build.outputs.activity3-result }}
+          if ${{ needs.build.outputs.activity3-result == 'success' }}; then
+            cp .github/templates/activity-completed.svg .github/activity-icons/activity3.svg
+          else
+            cp .github/templates/activity-incomplete.svg .github/activity-icons/activity3.svg
+          fi
+
+      # make/copy quiz icon
+      - name: quiz icon
+        run: |
+          if [[ ! -z "${{ steps.quiz-score.outputs.quiz_score }}" ]]; then
+            score=${{ steps.quiz-score.outputs.quiz_score }}
+            echo $score
+
+            if [[ $score == 5 ]]; then
+              cp .github/templates/quiz5.svg .github/activity-icons/quiz.svg
+            else
+              cp .github/templates/quiz.svg .github/activity-icons/quiz.svg
+              sed -i "s/><\/text>/>${score}<\/text>/" .github/activity-icons/quiz.svg
+              sed -i "s/>[0-9]<\/text>/>${score}<\/text>/" .github/activity-icons/quiz.svg
+            fi
+          fi
+
+      # create points bar
+      - name: points bar
+        uses: markpatterson27/points-bar@v1
+        with:
+          points: ${{ needs.build.outputs.grading-score }}
+          path: '.github/activity-icons/points-bar.svg'
+
+      # commit and push activity icons if statuses have changed
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add '.github/activity-icons'
+          git commit -m "Add/Update activity icons" || exit 0
+          git push origin status
+
+  # create Feedback PR
+  create-feedback-pr:
+    name: Create Feedback PR
+    runs-on: ubuntu-latest
+    # run even if autograding fails.
+    if: ${{ always() && needs.build.outputs.feedback-pr == '' }}
+    needs: [build]
+    steps:
+      # checkout files so can access template
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      # read template
+      - uses: markpatterson27/markdown-to-output@v1
+        id: mto
+        with:
+          filepath: .github/templates/pr_body.md
+      
+      # switch to feedback branch
+      - name: Create feedback branch
+        run: |
+          git checkout feedback || git checkout -b feedback
+          git push origin feedback
+
+      # check if base and head are same. create empty commit if they are
+      - name: Create empty commit
+        env:
+          DEFAULT_BRANCH: ${{ needs.build.outputs.default-branch-name }}
+        run: |
+          if [[ $(git rev-parse feedback) == $(git rev-parse $DEFAULT_BRANCH) ]]; then
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git checkout $DEFAULT_BRANCH
+            git commit -m "Setup Feedback PR" --allow-empty
+            git push origin $DEFAULT_BRANCH
+          fi
+
+      # create feedback pr
+      - name: Create Feedback PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          title: "Feedback"
+          body: ${{ steps.mto.outputs.body }}
+          base: feedback
+          head: ${{ needs.build.outputs.default-branch-name }}
+        run: |
+          gh pr create --base "$base" --head "$head" --title "$title" --body "$body"
+
+  # job to post feedback message in Feedback PR
+  # Classroom will create the PR when assignment accepted. PR should be issue 1.
+  post-feedback:
+    name: Post Feedback Comment
+    runs-on: ubuntu-latest
+    # run even if autograding fails. only run on main branch and if pr exists.
+    if: ${{ always() && needs.build.outputs.feedback-pr != '' && github.ref == 'refs/heads/main' && github.actor != 'github-classroom[bot]' }}
+    needs: [build]
+    steps:
+      # checkout files so can access template
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      # get quiz score
+      - name: Calculate quiz score
+        id: quiz-score
+        run: |
+          if [[ $(git log remotes/origin/feedback..main quiz.md) ]]; then
+            echo "quiz.md file changed"
+            /bin/bash .github/grading-scripts/quiz.sh || echo "::set-output name=quiz_score::0"
+          else
+            echo "quiz.md file not changed"
+          fi
+
+      # set env var
+      - name: Set additional environment variables
+        run: |
+          echo "REPO_NAME=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
+
+      # read template
+      - uses: markpatterson27/markdown-to-output@v1
+        id: mto
+        with:
+          filepath: .github/templates/pr_feedback.md
+
+      # set feedback var
+      # activity 1 feedback
+      - name: activity 1 feedback
+        run: |
+          if ${{ needs.build.outputs.activity1-result == 'success' }}; then
+            message="${{ steps.mto.outputs.activity1-success }}"
+            status="${{ steps.mto.outputs.status-success }}"
+          else
+            message="${{ steps.mto.outputs.activity1-fail }}"
+            status="${{ steps.mto.outputs.status-fail }}"
+          fi
+          echo "fb-activity1=$(/bin/bash .github/scripts/escape.sh "$message")" >> $GITHUB_ENV
+          echo "status-activity1=$(/bin/bash .github/scripts/escape.sh "$status")" >> $GITHUB_ENV
+
+      # activity 2 feedback
+      - name: activity 2 feedback
+        run: |
+          if ${{ needs.build.outputs.activity2-result == 'success' }}; then
+            message="${{ steps.mto.outputs.activity2-success }}"
+            status="${{ steps.mto.outputs.status-success }}"
+          else
+            message="${{ steps.mto.outputs.activity2-fail }}"
+            status="${{ steps.mto.outputs.status-fail }}"
+          fi
+          echo "fb-activity2=$(/bin/bash .github/scripts/escape.sh "$message")" >> $GITHUB_ENV
+          echo "status-activity2=$(/bin/bash .github/scripts/escape.sh "$status")" >> $GITHUB_ENV
+
+      # activity 3 feedback
+      - name: activity 3 feedback
+        run: |
+          if ${{ needs.build.outputs.activity3-result == 'success' }}; then
+            message="${{ steps.mto.outputs.activity3-success }}"
+            status="${{ steps.mto.outputs.status-success }}"
+          else
+            message="${{ steps.mto.outputs.activity3-fail }}"
+            status="${{ steps.mto.outputs.status-fail }}"
+          fi
+          echo "fb-activity3=$(/bin/bash .github/scripts/escape.sh "$message")" >> $GITHUB_ENV
+          echo "status-activity3=$(/bin/bash .github/scripts/escape.sh "$status")" >> $GITHUB_ENV
+
+      # quiz feedback
+      - name: quiz feedback
+        run: |
+          if [[ $(git log remotes/origin/feedback..main quiz.md) ]]; then
+            score=${{ steps.quiz-score.outputs.quiz_score }}
+            incorrect=(${{ steps.quiz-score.outputs.incorrect_answers }})
+            message=""
+
+            if [[ $score == 5 ]]; then
+              message="${{ steps.mto.outputs.quiz-success }}"
+              status="${{ steps.mto.outputs.status-success }}"
+            else
+              for i in ${incorrect[@]}; do
+                message+="Question $i incorrect. Try again.  "$'\n'
+              done
+
+              case $score in
+                0) status=":zero:" ;;
+                1) status=":one:" ;;
+                2) status=":two:" ;;
+                3) status=":three:" ;;
+                4) status=":four:" ;;
+              esac
+            fi
+          else
+            message="Quiz not attempted"
+            status=":zero:"
+          fi
+
+          echo "fb-quiz=$(/bin/bash .github/scripts/escape.sh "$message")" >> $GITHUB_ENV
+          echo "status-quiz=$(/bin/bash .github/scripts/escape.sh "$status")" >> $GITHUB_ENV
+
+      # replace tokens
+      # read template file and replace tokens. token replacement based on env name.
+      - name: prepare comment and substitute tokens
+        id: prep
+        uses: actions/github-script@v3
+        env:
+          points: ${{ needs.build.outputs.grading-score }}
+          template: ${{ steps.mto.outputs.body }}
+        with:
+          script: |
+            const fs = require('fs')
+            let commentBody = process.env.template
+
+            for (envName in process.env) {
+              commentBody = commentBody.replace("${"+envName+"}", process.env[envName]
+                .replace(/%0D/g, '\r')
+                .replace(/%0A/g, '\n')
+                .replace(/%25/g, '\%'))
+            }
+
+            return commentBody
+          result-encoding: string
+
+      # hide old feedback comments
+      - name: hide old feedback comments
+        uses: kanga333/comment-hider@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          issue_number: ${{ needs.build.outputs.feedback-pr }}
+
+      # post comment on feedback PR. issues and PRs have same numbers
+      - name: post comment
+        uses: actions/github-script@v3
+        env:
+          MESSAGE: ${{ steps.prep.outputs.result }}
+          ISSUE: ${{ needs.build.outputs.feedback-pr }}
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const { MESSAGE, ISSUE } = process.env
+            await github.issues.createComment({
+              issue_number: process.env.ISSUE,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${MESSAGE}`
+            })
