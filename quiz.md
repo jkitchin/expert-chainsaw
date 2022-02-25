@@ -48,7 +48,7 @@ Q4. Which GitHub feature provides task automation and workflow functionality, wh
 3. Pull Requests
 4. Actions
 
-Answer:
+Answer: 1
 
 ------
 
@@ -59,4 +59,4 @@ Q5. Pull requests provide a mechanism to request which git action?
 3. merge
 4. push
 
-Answer:
+Answer: 1
