@@ -39,7 +39,7 @@ jobs:
       - name: make image
         uses: jruipinto/ImageMagick-action@v1
         with:
-          command: mogrify -background lightblue label:@.github/scores .github/scores.png 
+          command: magick TEXT:.github/scores .github/scores.png
 
 
       # commit and push badges if badges have changed
