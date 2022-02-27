@@ -37,7 +37,15 @@ jobs:
 
       
       - name: make image
-        run: mogrify -background lightblue label:@.github/scores .github/scores.png 
+        run: |
+          run: |
+            
+            echo -e "Some Text Line1\nSome Text Line 2" | convert -background none -density 196 -resample 72 -unsharp 0x.5 -font "Courier" text:- -trim +repage -bordercolor white -border 3 text.gif
+            DQT='"' 
+            SRC="rights=${DQT}none${DQT} pattern=${DQT}PDF${DQT}"
+            RPL="rights=${DQT}read\|write${DQT} pattern=${DQT}PDF${DQT}"
+            sudo sed -i "s/$SRC/$RPL/" /etc/ImageMagick-6/policy.xml
+            mogrify -background lightblue label:@.github/scores .github/scores.png 
 
 
       # commit and push badges if badges have changed
