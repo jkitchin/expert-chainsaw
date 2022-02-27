@@ -38,11 +38,8 @@ jobs:
       
       - name: make image
         run: |            
-          DQT='"' 
-          SRC="rights=${DQT}none${DQT} pattern=${DQT}PDF${DQT}"
-          RPL="rights=${DQT}read\|write${DQT} pattern=${DQT}PDF${DQT}"
-          sudo sed -i "s/$SRC/$RPL/" /etc/ImageMagick-6/policy.xml
-          mogrify -background lightblue label:@.github/scores .github/scores.png 
+          pip install text_to_image
+          python -m text_to_image.encode -f .github/scores .github/scores.png 
 
 
       # commit and push badges if badges have changed
