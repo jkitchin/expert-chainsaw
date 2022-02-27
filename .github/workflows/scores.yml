@@ -39,7 +39,7 @@ jobs:
       - name: make image
         uses: jruipinto/ImageMagick-action@v1
         with:
-          command: magick TEXT:.github/scores .github/scores.png
+          command: magick -list font
 
 
       # commit and push badges if badges have changed
