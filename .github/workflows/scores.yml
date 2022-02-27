@@ -14,7 +14,7 @@ on:
     
 jobs:
   build:
-    name: Autograding
+    name: Autograding on scores branch
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -35,9 +35,11 @@ jobs:
           echo ${{ steps.autograder.outputs.points }} >> .github/scores
           ls -al >> .github/scores
 
-      - uses: jruipinto/ImageMagick-action@v1
+      
       - name: make image
-        run: convert -background lightblue label:@.github/scores .github/scores.png 
+        uses: jruipinto/ImageMagick-action@v1
+        with:
+          command: convert -background lightblue label:@.github/scores .github/scores.png 
 
 
       # commit and push badges if badges have changed
