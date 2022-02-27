@@ -7,6 +7,10 @@ now I can't push I bet.
 
 ![Points bar](../../blob/badges/.github/badges/points-bar.svg)
 
+
+![Scores](../../blob/scores/.github/scores)
+
+
 Embed
 -----
 before
