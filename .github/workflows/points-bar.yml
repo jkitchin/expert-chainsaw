@@ -1,27 +1,32 @@
-name: Update Points Bar
-
-on:
-  push:
-
 jobs:
-  update:
-    name: Update points bar
+  build:
+    name: Autograding
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
+
+      # add id to action so outputs can be used
+      - uses: education/autograding@v1
+        id: autograder
+        continue-on-error: true
+
+      # switch to badges branch
+      - run: git checkout badges || git checkout -b badges
 
       # create points bar
       - name: points bar
         uses: markpatterson27/points-bar@v1
         with:
-          points: '25/50'
-          path: 'points-bar.svg'
+          points: ${{ steps.autograder.outputs.points }}
+          path: '.github/badges/points-bar.svg'
 
-      # commit and push points-bar if changed
-      - name: Commit changes
+      # commit and push badges if badges have changed
+      - name: Commit changes to points bar
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add 'points-bar.svg'
+          git add '.github/badges/points-bar.svg'
           git commit -m "Add/Update points bar" || exit 0
-          git push
+          git push origin badges
