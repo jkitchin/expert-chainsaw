@@ -6,3 +6,7 @@ now I can't push I bet.
 
 
 ![Points bar](../../blob/badges/.github/badges/points-bar.svg)
+
+Embed
+-----
+<embed src="../../blob/badges/.github/badges/points-bar.svg">
