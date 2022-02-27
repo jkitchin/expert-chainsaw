@@ -37,7 +37,7 @@ jobs:
 
       
       - name: make image
-        run: magick -list font
+        run: which mogrify
 
 
       # commit and push badges if badges have changed
