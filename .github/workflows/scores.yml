@@ -44,7 +44,7 @@ jobs:
 
       - uses: maxheld83/pandoc@v2
         with:
-          args: ".github/scores.txt -o .github/scores.png"
+          args: ".github/scores.txt -o .github/scores.pdf"
           
 
 
