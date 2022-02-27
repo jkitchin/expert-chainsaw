@@ -12,3 +12,8 @@ Embed
 before
 <embed type="image/svg" src="../../blob/badges/.github/badges/points-bar.svg" width="600" height="200">
 after
+
+
+![test text in svg](./test.svg)
+
+should see some svg above.
