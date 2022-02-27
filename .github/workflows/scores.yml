@@ -32,19 +32,19 @@ jobs:
       - name: scores
         run: |
           echo `date` > .github/scores
-          echo ${{ steps.autograder.outputs.points }} >> .github/scores
+          echo ${{ steps.autograder.outputs.points }} >> .github/scores.txt
           ls -al >> .github/scores
 
       
       - name: make image
         run: |            
           pip install text_to_image
-          python -m text_to_image.encode -f .github/scores .github/scores.png
+          python -m text_to_image.encode -f .github/scores.txt .github/scores.png
 
 
       - uses: docker://pandoc/core:2.9
         with:
-          args: .github/scores -o .github/scores.png
+          args: .github/scores.txt -o .github/scores.png
           
 
 
@@ -53,7 +53,7 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add '.github/scores'
+          git add '.github/scores.txt'
           git add '.github/scores.png'
           git commit -m "Add/Update scores" || exit 0
           git push origin scores
