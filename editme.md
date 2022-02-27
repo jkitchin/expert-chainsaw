@@ -17,3 +17,10 @@ after
 ![test text in svg](./test.svg)
 
 should see some svg above.
+
+
+Try iframe
+
+<iframe src="../../blob/badges/.github/badges/points-bar.svg" title="working?"></iframe>
+
+is there one?
