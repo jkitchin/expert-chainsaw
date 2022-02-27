@@ -55,5 +55,6 @@ jobs:
           git config --local user.name "GitHub Action"
           git add '.github/scores.txt'
           git add '.github/scores.png'
+          git add '.github/scores.pdf'
           git commit -m "Add/Update scores" || exit 0
           git push origin scores
