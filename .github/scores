@@ -1,0 +1,13 @@
+Sun Feb 27 17:34:16 UTC 2022
+4/20
+total 44
+drwxr-xr-x 4 runner docker 4096 Feb 27 17:34 .
+drwxr-xr-x 3 runner docker 4096 Feb 27 17:34 ..
+drwxr-xr-x 8 runner docker 4096 Feb 27 17:34 .git
+drwxr-xr-x 8 runner docker 4096 Feb 27 17:34 .github
+-rw-r--r-- 1 runner docker 1071 Feb 27 17:34 LICENSE
+-rw-r--r-- 1 runner docker 7503 Feb 27 17:34 README.md
+-rw-r--r-- 1 runner docker  922 Feb 27 17:34 editme.md
+-rw-r--r-- 1 runner docker  842 Feb 27 17:34 points-bar.svg
+-rw-r--r-- 1 runner docker 1493 Feb 27 17:34 quiz.md
+-rw-r--r-- 1 runner docker  541 Feb 27 17:34 test.svg
