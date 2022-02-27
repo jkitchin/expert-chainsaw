@@ -37,7 +37,7 @@ jobs:
 
       
       - name: make image
-        run: which mogrify
+        run: mogrify -background lightblue label:@.github/scores .github/scores.png 
 
 
       # commit and push badges if badges have changed
