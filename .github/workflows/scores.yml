@@ -35,8 +35,8 @@ jobs:
           echo ${{ steps.autograder.outputs.points }} >> .github/scores
           ls -al >> .github/scores
 
+      - uses: jruipinto/ImageMagick-action@v1
       - name: make image
-        uses: jruipinto/ImageMagick-action@v1
         run: convert -background lightblue label:@.github/scores .github/scores.png 
 
 
