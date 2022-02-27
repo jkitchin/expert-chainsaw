@@ -42,9 +42,9 @@ jobs:
           python -m text_to_image.encode -f .github/scores.txt .github/scores.png
 
 
-      - uses: docker://pandoc/core:2.9
+      - uses: maxheld83/pandoc@v2
         with:
-          args: .github/scores.txt -o .github/scores.png
+          args: ".github/scores.txt -o .github/scores.png"
           
 
 
