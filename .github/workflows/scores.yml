@@ -39,7 +39,13 @@ jobs:
       - name: make image
         run: |            
           pip install text_to_image
-          python -m text_to_image.encode -f .github/scores .github/scores.png 
+          python -m text_to_image.encode -f .github/scores .github/scores.png
+
+
+      - uses: docker://pandoc/core:2.9
+        with:
+          args: .github/scores -o .github/scores.png
+          
 
 
       # commit and push badges if badges have changed
