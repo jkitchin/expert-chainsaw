@@ -26,7 +26,7 @@ I was not able to get imagemagick to work here in converting text to images. The
 wkhtmltoimage
 -------------
 
-![wkimage]((../../blob/scores/.github/wkscores.png)
+![wkimage](../../blob/scores/.github/wkscores.png)
 
 Text to pdf
 -----------
