@@ -32,7 +32,7 @@ jobs:
       - name: scores
         run: |
           echo `date` > .github/scores
-          echo ${{ steps.autograder.outputs.points }} >> .github/scores.txt
+          echo ${{ steps.autograder.outputs.points }} > .github/scores.txt
           ls -al >> .github/scores
 
       
