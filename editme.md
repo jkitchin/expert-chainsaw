@@ -10,5 +10,5 @@ now I can't push I bet.
 Embed
 -----
 before
-<embed type="text/html" src="../../blob/badges/.github/badges/points-bar.svg" width="600" height="200">
+<embed type="image/svg" src="../../blob/badges/.github/badges/points-bar.svg" width="600" height="200">
 after
