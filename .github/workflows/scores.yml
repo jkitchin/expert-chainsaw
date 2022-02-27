@@ -45,7 +45,12 @@ jobs:
       - uses: maxheld83/pandoc@v2
         with:
           args: ".github/scores.txt -o .github/scores.pdf"
-          
+
+
+      - name: wkhmtmltoimage
+        run: |
+          sudo apt-get install xvfb libfontconfig wkhtmltopdf
+          wkhtmltoimage .github/scores.txt .github/wkscores.png
 
 
       # commit and push badges if badges have changed
@@ -55,6 +60,7 @@ jobs:
           git config --local user.name "GitHub Action"
           git add '.github/scores.txt'
           git add '.github/scores.png'
+          git add '.github/wkscores.png'
           git add '.github/scores.pdf'
           git commit -m "Add/Update scores" || exit 0
           git push origin scores
