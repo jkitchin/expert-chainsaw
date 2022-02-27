@@ -37,9 +37,7 @@ jobs:
 
       
       - name: make image
-        uses: jruipinto/ImageMagick-action@v1
-        with:
-          command: magick -list font
+        run: magick -list font
 
 
       # commit and push badges if badges have changed
