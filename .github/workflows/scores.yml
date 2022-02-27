@@ -36,9 +36,8 @@ jobs:
           ls -al >> .github/scores
 
       - name: make image
-        - uses: jruipinto/ImageMagick-action@v1
-        - run: |
-            convert -background lightblue label:@.github/scores .github/scores.png 
+        uses: jruipinto/ImageMagick-action@v1
+        run: convert -background lightblue label:@.github/scores .github/scores.png 
 
 
       # commit and push badges if badges have changed
