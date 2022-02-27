@@ -23,6 +23,11 @@ Turn text to image
 
 I was not able to get imagemagick to work here in converting text to images. There is a mogrify command, but it seems to have some security policy setup that prevents it from working. Maybe there is a way to make it work, but I did not find it.
 
+wkhtmltoimage
+-------------
+
+![wkimage]((../../blob/scores/.github/wkscores.png)
+
 Text to pdf
 -----------
 
